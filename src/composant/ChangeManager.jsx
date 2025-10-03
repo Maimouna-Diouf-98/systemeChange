@@ -64,8 +64,8 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                 id: Date.now(),
                 deviseDepart: formulaire.deviseDepart,
                 deviseArrivee: formulaire.deviseArrivee,
-                tauxActuel: parseFloat(formulaire.tauxActuel),
-                prixAchatHistorique: parseFloat(formulaire.prixAchatHistorique),
+                tauxActuel: parseFloat(formulaire.tauxActuel).toFixed(6),
+                prixAchatHistorique: parseFloat(formulaire.prixAchatHistorique).toFixed(6),
             };
             setListeTaux(prev => [...prev, nouveauTaux]);
             toast.success("Taux ajouté avec succès ");
