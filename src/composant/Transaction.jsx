@@ -174,7 +174,7 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
                         <span className="text-sm font-medium">
                           1 {transaction.deviseDestination} =
                           <span className="ml-2 text-lg font-bold text-purple-700">
-                            {apercu.tauxInverse.toFixed(8)}
+                            {apercu.tauxInverse}
                           </span>
                           <span className="ml-1 font-bold text-purple-700">
                             {transaction.deviseDepart}
