@@ -10,7 +10,7 @@ function Header() {
           </h1>
         </header>
         </div>
-    </div>
+    </div> 
   )
 }
 

@@ -9,13 +9,7 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
       [champ]: valeur
     }))
   }
-  const transactionDirect = () => {
-    if (!transaction.deviseDepart && !transaction.deviseDestination) return false
-    return listeTaux.some(taux =>
-      taux.deviseDepart === transaction.deviseDepart &&
-      taux.deviseArrivee === transaction.deviseDestination
-    )
-  }
+
   const calculeTransaction = () => {
     if (!transaction.montant || !transaction.deviseDepart || !transaction.deviseDestination) {
       return null;
@@ -25,17 +19,37 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
       taux.deviseArrivee === transaction.deviseDestination)
     if (tauxDirect) {
       const montantFinal = parseFloat(transaction.montant) * tauxDirect.tauxActuel
+      const tauxInverse = 1 / tauxDirect.tauxActuel
       return {
         existe: true,
-        montantFinal: montantFinal.toFixed(2),
-        taux: tauxDirect.tauxActuel
+        sensDirect: true,
+        montantFinal: montantFinal.toFixed(9),
+        taux: tauxDirect.tauxActuel,
+        tauxInverse:tauxInverse
+     
+      };
+    }
+    const tauxInverse = listeTaux.find(taux =>
+      taux.deviseDepart === transaction.deviseDestination &&
+      taux.deviseArrivee === transaction.deviseDepart
+    )
+
+    if (tauxInverse) {
+      const tauxCalcule = 1 / tauxInverse.tauxActuel;
+      const montantFinal = parseFloat(transaction.montant) * tauxCalcule
+      return {
+        existe: true,
+        sensDirect: false,
+        montantFinal: montantFinal.toFixed(9),
+        taux: tauxCalcule,
+        tauxInverse: tauxInverse.tauxActuel
       };
     }
     return { existe: false };
   }
   const apercu = calculeTransaction()
   const formulaireComplet = transaction.montant && transaction.deviseDepart && transaction.deviseDestination;
-  
+
 
   return (
     <div>
@@ -114,35 +128,102 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
             ))}
           </select>
         </div>
+        {/* AFFICHAGE BIDIRECTIONNEL UNIQUEMENT SI LES 2 DEVISES SONT CHOISIES */}
+        {transaction.deviseDepart && transaction.deviseDestination && apercu && (
+          <div className={`p-6 rounded-lg border-2 ${apercu.existe
+              ? 'bg-green-50 border-green-500'
+              : 'bg-yellow-50 border-yellow-500'
+            }`}>
+            {apercu.existe ? (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                    ✓ Taux disponible
+                  </div>
+                 
+                </div>
 
-       
+                {/* Affichage bidirectionnel */}
+                <div className="bg-white rounded-lg p-5 border-2 border-green-200">
+                  <p className="text-xs text-gray-600 mb-3 font-semibold uppercase">Taux de change</p>
+                  <div className="space-y-3">
+                    {/* Sens de la transaction choisie */}
+                    <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-blue-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">
+                          →
+                        </span>
+                        <span className="text-sm font-medium">
+                          1 {transaction.deviseDepart} =
+                          <span className="ml-2 text-lg font-bold text-blue-700">
+                            {apercu.taux.toFixed(8)}
+                          </span>
+                          <span className="ml-1 font-bold text-blue-700">
+                            {transaction.deviseDestination}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Sens inverse */}
+                    <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-purple-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">
+                          ←
+                        </span>
+                        <span className="text-sm font-medium">
+                          1 {transaction.deviseDestination} =
+                          <span className="ml-2 text-lg font-bold text-purple-700">
+                            {apercu.tauxInverse.toFixed(8)}
+                          </span>
+                          <span className="ml-1 font-bold text-purple-700">
+                            {transaction.deviseDepart}
+                          </span>
+                          
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="bg-yellow-600 text-white px-3 py-1 rounded-full text-sm font-bold inline-block mb-3">
+                  ⚠ Aucun taux direct
+                </div>
+                <p className="text-yellow-700 text-sm font-medium mb-2">
+                  Aucun taux direct entre {transaction.deviseDepart} et {transaction.deviseDestination}
+                </p>
+                
+              </div>
+            )}
+          </div>
+        )}
+
+
       </div>
-       {/* BOUTONS DE NAVIGATION */}
-       <div className="flex gap-4">
+      {/* BOUTONS DE NAVIGATION */}
+      <div className="flex gap-4">
         <button onClick={etape1}
           className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 rounded-lg flex items-center justify-center gap-2">
           <ArrowLeft size={24} />
           Retour
         </button>
-        
+
         <button
           onClick={etape3}
           disabled={!formulaireComplet}
-          className={`flex-1 py-4 rounded-lg font-bold text-lg flex items-center justify-center gap-2 ${
-            formulaireComplet
+          className={`flex-1 py-4 rounded-lg font-bold text-lg flex items-center justify-center gap-2 ${formulaireComplet
               ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}>
+            }`}>
           Calculer les Chemins
           <ArrowRight size={24} />
         </button>
       </div>
 
-      {!formulaireComplet && (
-        <p className="text-center text-yellow-600 mt-4 font-medium">
-           Veuillez remplir tous les champs pour continuer
-        </p>
-      )}
+
 
 
 

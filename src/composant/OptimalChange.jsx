@@ -15,11 +15,14 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2 }) {
             const depart = transaction.deviseDepart;
             const destination = transaction.deviseDestination;
             const allChemins = [];
-            const tauxDirect = listeTaux.find(t => t.deviseDepart === depart && t.deviseArrivee===destination)
+            const tauxDirect = listeTaux.find(t =>
+               t.deviseDepart === depart && 
+               t.deviseArrivee===destination)
             if (tauxDirect) {
                 const montantFinal = montant * tauxDirect.tauxActuel
                 const marge = ((tauxDirect.tauxActuel - tauxDirect.prixAchatHistorique) / tauxDirect.prixAchatHistorique) * 100;
                 allChemins.push({
+                    sensDirect: true,
                     chemin: `${depart} → ${destination}`,
                     etapes: [
                         { devise: depart, montant: montant },
@@ -27,7 +30,27 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2 }) {
                     ],
                     montantFinal: montantFinal,
                     marge: marge,
-                    details: `Conversion directe avec le taux ${tauxDirect.tauxActuel.toFixed(2)}`
+                    details: `Conversion directe avec le taux ${tauxDirect.tauxActuel.toFixed(6)}`
+
+                })
+            }
+            const tauxInverse =  listeTaux.find(t =>
+               t.deviseDepart === destination && 
+               t.deviseArrivee===depart)
+                if (tauxInverse) {
+                  const tauxCalcule = 1 / tauxInverse.tauxActuel;
+                const montantFinal = montant * tauxCalcule
+                const marge = ((tauxCalcule- tauxInverse.prixAchatHistorique) / tauxInverse.prixAchatHistorique) * 100;
+                allChemins.push({
+                    sensDirect: false,
+                    chemin: `${depart} → ${destination}`,
+                    etapes: [
+                        { devise: depart, montant: montant },
+                        { devise: destination, montant: montantFinal }
+                    ],
+                    montantFinal: montantFinal,
+                    marge: marge,
+                    details: `Conversion Inverse avec le taux ${tauxCalcule.toFixed(6)}`
 
                 })
             }
@@ -143,9 +166,7 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2 }) {
                         <TrendingUp size={16} />
                         CHEMIN OPTIMAL
                       </span>
-                      <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold">
-                        Meilleure marge
-                      </span>
+                      
                     </div>
                   )}
 
@@ -153,16 +174,8 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2 }) {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-xl font-bold text-gray-800 mb-1">{chemin.chemin}</h3>
-                      <p className="text-sm text-gray-600">{chemin.details}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Marge</p>
-                      <p className={`text-3xl font-bold ${
-                        chemin.marge > 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {chemin.marge.toFixed(2)}%
-                      </p>
-                    </div>
+                   
                   </div>
 
                   {/* VISUALISATION DES ÉTAPES */}
@@ -181,7 +194,7 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2 }) {
                               {etape.devise}
                             </div>
                             <p className="text-lg font-bold text-gray-800">
-                              {etape.montant.toFixed(2)}
+                              {etape.montant.toFixed(6)}
                             </p>
                           </div>
                           
@@ -202,7 +215,7 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2 }) {
                       <span className={`text-2xl font-bold ${
                         index === 0 ? 'text-green-700' : 'text-gray-800'
                       }`}>
-                        {chemin.montantFinal.toFixed(2)} {transaction.deviseDestination}
+                        {chemin.montantFinal.toFixed(6)} {transaction.deviseDestination}
                       </span>
                     </div>
                   </div>
@@ -219,7 +232,7 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2 }) {
                         <th className="text-left py-3 px-4 font-bold text-gray-700">Rang</th>
                         <th className="text-left py-3 px-4 font-bold text-gray-700">Chemin</th>
                         <th className="text-right py-3 px-4 font-bold text-gray-700">Montant Final</th>
-                        <th className="text-right py-3 px-4 font-bold text-gray-700">Marge</th>
+                        
                       </tr>
                     </thead>
                     <tbody>
@@ -240,15 +253,9 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2 }) {
                           </td>
                           <td className="py-3 px-4 font-medium text-gray-800">{chemin.chemin}</td>
                           <td className="py-3 px-4 text-right font-bold text-gray-900">
-                            {chemin.montantFinal.toFixed(2)} {transaction.deviseDestination}
+                            {chemin.montantFinal.toFixed(6)} {transaction.deviseDestination}
                           </td>
-                          <td className="py-3 px-4 text-right">
-                            <span className={`font-bold ${
-                              chemin.marge > 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {chemin.marge.toFixed(2)}%
-                            </span>
-                          </td>
+                          
                         </tr>
                       ))}
                     </tbody>

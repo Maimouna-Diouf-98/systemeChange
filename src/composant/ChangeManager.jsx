@@ -1,8 +1,8 @@
-import { ArrowRight, PlusCircle, Trash2 } from 'lucide-react';
+import { ArrowRight, Edit2Icon, PlusCircle, Trash2 } from 'lucide-react';
 import { useState } from 'react'
 import { toast } from 'react-toastify';
 
-function ChangeManager({ devises = [], listeTaux =[], setListeTaux, etape2 }) {
+function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
 
     // formulaire de change 
     const [formulaire, setFormulaire] = useState({
@@ -11,7 +11,7 @@ function ChangeManager({ devises = [], listeTaux =[], setListeTaux, etape2 }) {
         tauxActuel: '',
         prixAchatHistorique: '',
     });
-
+    const [editId, setEditId] = useState(null);
     //mise a jour du formulaire
     const handleformChange = (champ, valeur) => {
         setFormulaire(prev => ({
@@ -22,7 +22,7 @@ function ChangeManager({ devises = [], listeTaux =[], setListeTaux, etape2 }) {
     // Calculer la marge entre le prix d'achat et le prix achat historique
     const calculeMarge = (prixVente, prixAchat) => {
         if (!prixAchat || prixAchat === 0) return 0
-        return (((prixVente - prixAchat) / prixAchat) * 100).toFixed(2);
+        return (((prixVente - prixAchat) / prixAchat) * 100).toFixed(6);
     }
     const ajoutTaux = () => {
         if (!formulaire.deviseDepart || !formulaire.deviseArrivee
@@ -30,26 +30,65 @@ function ChangeManager({ devises = [], listeTaux =[], setListeTaux, etape2 }) {
             toast.info('Veuillez remplir tous les champs');
             return;
         }
-        const nouveauTaux = {
-            id: Date.now(),
-            deviseDepart: formulaire.deviseDepart,
-            deviseArrivee: formulaire.deviseArrivee,
-            tauxActuel: parseFloat(formulaire.tauxActuel),
-            prixAchatHistorique: parseFloat(formulaire.prixAchatHistorique)
+
+        if (!editId) {
+            const existe = listeTaux.some(t =>
+                (t.deviseDepart === formulaire.deviseDepart && t.deviseArrivee === formulaire.deviseArrivee) ||
+                (t.deviseDepart === formulaire.deviseArrivee && t.deviseArrivee === formulaire.deviseDepart)
+            );
+
+            if (existe) {
+                toast.error("Ce couple de devises est déjà enregistré !");
+                return;
+            }
+        }
+        if (editId) {
+            // Mode édition → mise à jour
+            const updated = listeTaux.map(t =>
+                t.id === editId
+                    ? {
+                        ...t,
+                        deviseDepart: formulaire.deviseDepart,
+                        deviseArrivee: formulaire.deviseArrivee,
+                        tauxActuel: parseFloat(formulaire.tauxActuel),
+                        prixAchatHistorique: parseFloat(formulaire.prixAchatHistorique)
+                    }
+                    : t
+            );
+            setListeTaux(updated);
+            setEditId(null);
+            toast.success("Taux modifié avec succès ");
+        } else {
+            // Mode ajout
+            const nouveauTaux = {
+                id: Date.now(),
+                deviseDepart: formulaire.deviseDepart,
+                deviseArrivee: formulaire.deviseArrivee,
+                tauxActuel: parseFloat(formulaire.tauxActuel),
+                prixAchatHistorique: parseFloat(formulaire.prixAchatHistorique),
+            };
+            setListeTaux(prev => [...prev, nouveauTaux]);
+            toast.success("Taux ajouté avec succès ");
         }
 
-        setListeTaux(prev => [...prev, nouveauTaux]);
-
-
+        // Reset formulaire
         setFormulaire({
             deviseDepart: '',
             deviseArrivee: '',
             tauxActuel: '',
             prixAchatHistorique: ''
         });
-
-
     }
+    const editTaux = (taux) => {
+        setFormulaire({
+            deviseDepart: taux.deviseDepart,
+            deviseArrivee: taux.deviseArrivee,
+            tauxActuel: taux.tauxActuel,
+            prixAchatHistorique: taux.prixAchatHistorique
+        });
+        setEditId(taux.id);
+    };
+
     const deleteTaux = (id) => {
         setListeTaux(prev => prev.filter(taux => taux.id !== id))
     }
@@ -102,7 +141,7 @@ function ChangeManager({ devises = [], listeTaux =[], setListeTaux, etape2 }) {
                         </div>
                         <div className=''>
                             <label className='block text-sm text-gray-700 font-semibold mb-2'>
-                                3️⃣ Taux de Change Actuel
+                                3️⃣ Taux de Vente
                             </label>
                             <input
                                 value={formulaire.tauxActuel}
@@ -119,7 +158,7 @@ function ChangeManager({ devises = [], listeTaux =[], setListeTaux, etape2 }) {
                         </div>
                         <div className=''>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                4️⃣ Prix d'Achat Historique
+                                4️⃣ Taux d'Achat
                             </label>
                             <input
                                 type="number"
@@ -134,6 +173,7 @@ function ChangeManager({ devises = [], listeTaux =[], setListeTaux, etape2 }) {
                                 À quel prix vous avez acheté cette devise ?
                             </p>
                         </div>
+
                         {formulaire.tauxActuel && formulaire.prixAchatHistorique && (
                             <div className="mt-4 p-4 bg-green-50 border-2 border-green-200 rounded-lg">
                                 <p className="text-sm font-medium text-gray-700">
@@ -153,11 +193,12 @@ function ChangeManager({ devises = [], listeTaux =[], setListeTaux, etape2 }) {
 
                         <button
                             onClick={ajoutTaux}
-                            className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl"
+                            className={`w-full mt-4 ${editId ? 'bg-blue-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'} 
+    text-white font-bold py-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl`}
                         >
-                            <PlusCircle size={24} />
-                            Ajouter ce Taux de Change
+                            {editId ? "Mettre à jour le Taux" : "Ajouter ce Taux de Change"}
                         </button>
+
 
 
                     </div>
@@ -165,82 +206,103 @@ function ChangeManager({ devises = [], listeTaux =[], setListeTaux, etape2 }) {
 
                 </div>
                 {listeTaux.length > 0 && (
-                    <div className="bg-white rounded-xl shadow-lg p-6">
+                    <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
                         <h2 className="text-2xl font-bold text-gray-800 mb-4">
                             Taux Enregistrés ({listeTaux.length})
                         </h2>
-                        <div className="spacer-y-3">
+
+                        <div className="space-y-3">
                             {listeTaux.map((taux) => {
                                 const marge = calculeMarge(taux.tauxActuel, taux.prixAchatHistorique);
-                                const estPositif = parseFloat(marge) > 0;
+                                // Calculer le taux inverse (1 EUR = X XOF)
+                                const tauxInverse = (1 / taux.tauxActuel);
+
                                 return (
-                                    <div
-                                        key={taux.id}
-                                        className="border-2 border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-all">
+                                    <div key={taux.id} className="border-2 border-gray-200 rounded-lg p-5 hover:border-indigo-300 transition-all">
                                         <div className="flex items-center justify-between">
                                             <div className="flex-1">
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <span className="text-2xl font-bold text-indigo-900">
-                                                        {taux.deviseDepart} → {taux.deviseArrivee}
+                                                {/* Titre avec les devises */}
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <span className="text-xl font-bold text-indigo-900">
+                                                        {taux.deviseDepart} ⇄ {taux.deviseArrivee}
                                                     </span>
-                                                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${estPositif
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : 'bg-red-100 text-red-700'
-                                                        }`}>
-                                                        {estPositif ? '✅' : '⚠️'} Marge: {marge}%
+                                                    <span className="px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-700">
+                                                        Marge: {marge}%
                                                     </span>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                                    <div>
-                                                        <span className="text-gray-600">Taux actuel:</span>
-                                                        <span className="ml-2 font-bold text-gray-800">
-                                                            {taux.tauxActuel.toFixed(2)}
-                                                        </span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-gray-600">Prix d'achat:</span>
-                                                        <span className="ml-2 font-bold text-gray-800">
-                                                            {taux.prixAchatHistorique.toFixed(2)}
-                                                        </span>
+
+                                                {/* NOUVEAU : Affichage des taux dans les deux sens */}
+                                                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 mb-3">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                        {/* Sens 1 : XOF → EUR */}
+                                                        <div className="flex items-center gap-2">
+
+                                                            <span className="text-sm font-medium text-gray-700">
+                                                                1 {taux.deviseDepart} =
+                                                                <span className="ml-1 font-bold text-blue-700">
+                                                                    {taux.tauxActuel} {taux.deviseArrivee}
+                                                                </span>
+                                                            </span>
+                                                            {/* Sens 2 : EUR → XOF */}
+                                                            <div className="flex items-center gap-2">
+
+                                                                <span className="text-sm font-medium text-gray-700">
+                                                                    1 {taux.deviseArrivee} =
+                                                                    <span className="ml-1 font-bold text-purple-700">
+                                                                        {tauxInverse} {taux.deviseDepart}
+                                                                    </span>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+
                                                     </div>
                                                 </div>
 
+                                                {/* Prix d'achat historique */}
+                                                <div className="text-sm text-gray-600">
+                                                    <span className="font-medium">Prix d'achat:</span>
+                                                    <span className="ml-2 font-bold text-gray-800">
+                                                        {taux.prixAchatHistorique}
+                                                    </span>
+                                                </div>
                                             </div>
+
+                                            {/* Bouton supprimer */}
                                             <button
-                                                onClick={() => deleteTaux(taux.id)}
-                                                className="ml-4 p-3 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-all"
-                                                title="Supprimer ce taux"
+                                                onClick={() => editTaux(taux)}
+                                                className="ml-4 p-3 bg-green-100 hover:bg-green-200 text-white-600 rounded-lg transition-all"
+                                                title="Modifier ce taux"
                                             >
+                                                <Edit2Icon size={20} />
+                                            </button>
+                                            <button onClick={() => deleteTaux(taux.id)}
+                                                className="ml-4 p-3 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-all"
+                                                title="Supprimer ce taux">
                                                 <Trash2 size={20} />
                                             </button>
-
                                         </div>
-
                                     </div>
-                                )
+                                );
                             })}
                         </div>
                     </div>
-
                 )}
+
             </div>
             <button
                 onClick={etape2}
                 disabled={listeTaux.length === 0}
                 className={`w-full py-4 rounded-lg font-bold text-lg flex items-center justify-center gap-2 transition-all ${listeTaux.length > 0
-                        ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
             >
                 Continuer vers la Transaction
                 <ArrowRight size={24} />
             </button>
 
-            {listeTaux.length === 0 && (
-                <p className="text-center text-yellow-600 mt-4 font-medium">
-                Vous devez ajouter au moins 1 taux pour continuer
-                </p>
-            )}
+
         </div>
     )
 }
