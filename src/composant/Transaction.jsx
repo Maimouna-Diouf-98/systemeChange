@@ -2,7 +2,6 @@ import { ArrowLeft, ArrowRight } from 'lucide-react'
 import React from 'react'
 
 function Transaction({ devises = [], listeTaux = [], transaction, setTransaction, etape1, etape3 }) {
-  //mise a jour du formulaire
   const handleformChange = (champ, valeur) => {
     setTransaction(prev => ({
       ...prev,
@@ -14,42 +13,48 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
     if (!transaction.montant || !transaction.deviseDepart || !transaction.deviseDestination) {
       return null;
     }
+
+    // Recherche du taux direct
     const tauxDirect = listeTaux.find(taux =>
       taux.deviseDepart === transaction.deviseDepart &&
-      taux.deviseArrivee === transaction.deviseDestination)
+      taux.deviseArrivee === transaction.deviseDestination
+    )
+
     if (tauxDirect) {
-      const montantFinal = parseFloat(transaction.montant) * tauxDirect.tauxActuel
-      const tauxInverse = 1 / tauxDirect.tauxActuel
+      const montantFinal = parseFloat(transaction.montant) * parseFloat(tauxDirect.tauxActuel)
+      const tauxInverse = 1 / parseFloat(tauxDirect.tauxActuel)
       return {
         existe: true,
         sensDirect: true,
         montantFinal: montantFinal.toFixed(9),
-        taux: tauxDirect.tauxActuel,
-        tauxInverse:tauxInverse
-     
+        taux: parseFloat(tauxDirect.tauxActuel),
+        tauxInverse: tauxInverse
       };
     }
+
+    // Recherche du taux inverse
     const tauxInverse = listeTaux.find(taux =>
       taux.deviseDepart === transaction.deviseDestination &&
       taux.deviseArrivee === transaction.deviseDepart
     )
 
     if (tauxInverse) {
-      const tauxCalcule = 1 / tauxInverse.tauxActuel;
+      const tauxCalcule = 1 / parseFloat(tauxInverse.tauxActuel);
       const montantFinal = parseFloat(transaction.montant) * tauxCalcule
       return {
         existe: true,
         sensDirect: false,
         montantFinal: montantFinal.toFixed(9),
         taux: tauxCalcule,
-        tauxInverse: tauxInverse.tauxActuel
+        tauxInverse: parseFloat(tauxInverse.tauxActuel)
       };
     }
+
     return { existe: false };
   }
+
   const apercu = calculeTransaction()
   const formulaireComplet = transaction.montant && transaction.deviseDepart && transaction.deviseDestination;
-
 
   return (
     <div>
@@ -65,12 +70,13 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
           ))}
         </div>
       </div>
+
       <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">
           Nouvelle Transaction
         </h2>
 
-        {/* CHAMP 1 : Montant */}
+        {/* Montant */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             1️⃣ Montant initial
@@ -95,7 +101,7 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
           </p>
         </div>
 
-        {/* CHAMP 2 : Devise de départ */}
+        {/* Devise de départ */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             2️⃣ Devise de départ
@@ -112,10 +118,10 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
           </select>
         </div>
 
-        {/* CHAMP 3 : Devise de destination */}
+        {/* Devise de destination */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-gray-700 mb-2">
-            3️⃣Devise de destination
+            3️⃣ Devise de destination
           </label>
           <select
             value={transaction.deviseDestination}
@@ -128,26 +134,25 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
             ))}
           </select>
         </div>
-        {/* AFFICHAGE BIDIRECTIONNEL UNIQUEMENT SI LES 2 DEVISES SONT CHOISIES */}
+
+        {/* Résumé du taux */}
         {transaction.deviseDepart && transaction.deviseDestination && apercu && (
           <div className={`p-6 rounded-lg border-2 ${apercu.existe
-              ? 'bg-green-50 border-green-500'
-              : 'bg-yellow-50 border-yellow-500'
-            }`}>
+            ? 'bg-green-50 border-green-500'
+            : 'bg-yellow-50 border-yellow-500'
+          }`}>
             {apercu.existe ? (
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold">
                     ✓ Taux disponible
                   </div>
-                 
                 </div>
 
-                {/* Affichage bidirectionnel */}
                 <div className="bg-white rounded-lg p-5 border-2 border-green-200">
                   <p className="text-xs text-gray-600 mb-3 font-semibold uppercase">Taux de change</p>
                   <div className="space-y-3">
-                    {/* Sens de la transaction choisie */}
+                    {/* Sens direct */}
                     <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-3">
                       <div className="flex items-center gap-2">
                         <span className="bg-blue-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">
@@ -174,17 +179,17 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
                         <span className="text-sm font-medium">
                           1 {transaction.deviseDestination} =
                           <span className="ml-2 text-lg font-bold text-purple-700">
-                            {apercu.tauxInverse}
+                            {typeof apercu.tauxInverse === 'number'
+                              ? apercu.tauxInverse.toFixed(8)
+                              : parseFloat(apercu.tauxInverse || 0).toFixed(8)}
                           </span>
                           <span className="ml-1 font-bold text-purple-700">
                             {transaction.deviseDepart}
                           </span>
-                          
                         </span>
                       </div>
                     </div>
                   </div>
-
                 </div>
               </div>
             ) : (
@@ -195,18 +200,18 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
                 <p className="text-yellow-700 text-sm font-medium mb-2">
                   Aucun taux direct entre {transaction.deviseDepart} et {transaction.deviseDestination}
                 </p>
-                
               </div>
             )}
           </div>
         )}
-
-
       </div>
-      {/* BOUTONS DE NAVIGATION */}
+
+      {/* Boutons navigation */}
       <div className="flex gap-4">
-        <button onClick={etape1}
-          className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 rounded-lg flex items-center justify-center gap-2">
+        <button
+          onClick={etape1}
+          className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 rounded-lg flex items-center justify-center gap-2"
+        >
           <ArrowLeft size={24} />
           Retour
         </button>
@@ -215,18 +220,14 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
           onClick={etape3}
           disabled={!formulaireComplet}
           className={`flex-1 py-4 rounded-lg font-bold text-lg flex items-center justify-center gap-2 ${formulaireComplet
-              ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}>
+            ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg'
+            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+        >
           Calculer les Chemins
           <ArrowRight size={24} />
         </button>
       </div>
-
-
-
-
-
     </div>
   )
 }
