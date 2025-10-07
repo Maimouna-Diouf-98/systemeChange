@@ -26,7 +26,7 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
       return {
         existe: true,
         sensDirect: true,
-        montantFinal: montantFinal.toFixed(9),
+        montantFinal: montantFinal.toFixed(6),
         taux: parseFloat(tauxDirect.tauxActuel),
         tauxInverse: tauxInverse
       };
@@ -44,7 +44,7 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
       return {
         existe: true,
         sensDirect: false,
-        montantFinal: montantFinal.toFixed(9),
+        montantFinal: montantFinal.toFixed(6),
         taux: tauxCalcule,
         tauxInverse: parseFloat(tauxInverse.tauxActuel)
       };
@@ -161,7 +161,7 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
                         <span className="text-sm font-medium">
                           1 {transaction.deviseDepart} =
                           <span className="ml-2 text-lg font-bold text-blue-700">
-                            {apercu.taux.toFixed(8)}
+                            {apercu.taux.toFixed(6)}
                           </span>
                           <span className="ml-1 font-bold text-blue-700">
                             {transaction.deviseDestination}
@@ -180,8 +180,8 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
                           1 {transaction.deviseDestination} =
                           <span className="ml-2 text-lg font-bold text-purple-700">
                             {typeof apercu.tauxInverse === 'number'
-                              ? apercu.tauxInverse.toFixed(8)
-                              : parseFloat(apercu.tauxInverse || 0).toFixed(8)}
+                              ? apercu.tauxInverse.toFixed(6)
+                              : parseFloat(apercu.tauxInverse || 0).toFixed(6)}
                           </span>
                           <span className="ml-1 font-bold text-purple-700">
                             {transaction.deviseDepart}

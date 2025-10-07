@@ -1,4 +1,4 @@
-import { ArrowRight, Edit2Icon, PlusCircle, Trash2 } from 'lucide-react';
+import { ArrowRight, Edit2Icon, Trash2 } from 'lucide-react';
 import { useState } from 'react'
 import { toast } from 'react-toastify';
 
@@ -9,7 +9,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
         deviseDepart: '',
         deviseArrivee: '',
         tauxActuel: '',
-        prixAchatHistorique: '',
+        
     });
     const [editId, setEditId] = useState(null);
     //mise a jour du formulaire
@@ -20,13 +20,13 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
         }))
     }
     // Calculer la marge entre le prix d'achat et le prix achat historique
-    const calculeMarge = (prixVente, prixAchat) => {
-        if (!prixAchat || prixAchat === 0) return 0
-        return (((prixVente - prixAchat) / prixAchat) * 100).toFixed(6);
-    }
+    // const calculeMarge = (prixVente, prixAchat) => {
+    //     if (!prixAchat || prixAchat === 0) return 0
+    //     return (((prixVente - prixAchat) / prixAchat) * 100).toFixed(6);
+    // }
     const ajoutTaux = () => {
         if (!formulaire.deviseDepart || !formulaire.deviseArrivee
-            || !formulaire.tauxActuel || !formulaire.prixAchatHistorique) {
+            || !formulaire.tauxActuel) {
             toast.info('Veuillez remplir tous les champs');
             return;
         }
@@ -50,8 +50,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                         ...t,
                         deviseDepart: formulaire.deviseDepart,
                         deviseArrivee: formulaire.deviseArrivee,
-                        tauxActuel: parseFloat(formulaire.tauxActuel),
-                        prixAchatHistorique: parseFloat(formulaire.prixAchatHistorique)
+                        tauxActuel:Number(parseFloat(formulaire.tauxActuel)),
                     }
                     : t
             );
@@ -64,8 +63,8 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                 id: Date.now(),
                 deviseDepart: formulaire.deviseDepart,
                 deviseArrivee: formulaire.deviseArrivee,
-                tauxActuel: parseFloat(formulaire.tauxActuel).toFixed(6),
-                prixAchatHistorique: parseFloat(formulaire.prixAchatHistorique).toFixed(6),
+                tauxActuel:Number( parseFloat(formulaire.tauxActuel).toFixed(6)),
+                
             };
             setListeTaux(prev => [...prev, nouveauTaux]);
             toast.success("Taux ajouté avec succès ");
@@ -76,7 +75,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
             deviseDepart: '',
             deviseArrivee: '',
             tauxActuel: '',
-            prixAchatHistorique: ''
+          
         });
     }
     const editTaux = (taux) => {
@@ -84,7 +83,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
             deviseDepart: taux.deviseDepart,
             deviseArrivee: taux.deviseArrivee,
             tauxActuel: taux.tauxActuel,
-            prixAchatHistorique: taux.prixAchatHistorique
+            
         });
         setEditId(taux.id);
     };
@@ -139,24 +138,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                             <p className="text-xs text-gray-500 mt-1">Différente de la devise de départ</p>
 
                         </div>
-                        <div className=''>
-                            <label className='block text-sm text-gray-700 font-semibold mb-2'>
-                                3️⃣ Taux de Vente
-                            </label>
-                            <input
-                                value={formulaire.tauxActuel}
-                                onChange={(e) => handleformChange('tauxActuel', e.target.value)}
-
-                                type="number"
-                                step="0.0001"
-                                placeholder="Ex: 655.5000"
-                                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                                Combien de {formulaire.deviseArrivee || '?'} pour 1 {formulaire.deviseDepart || '?'}
-                            </p>
-                        </div>
-                        <div className=''>
+                         <div className=''>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 4️⃣ Taux d'Achat
                             </label>
@@ -164,32 +146,14 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                                 type="number"
                                 step="0.0001"
                                 placeholder="Ex: 650.0000"
-                                value={formulaire.prixAchatHistorique}
-                                onChange={(e) => handleformChange('prixAchatHistorique', e.target.value)}
+                                value={formulaire.tauxActuel}
+                                onChange={(e) => handleformChange('tauxActuel', e.target.value)}
 
                                 className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
-                                À quel prix vous avez acheté cette devise ?
-                            </p>
+                           
                         </div>
-
-                        {formulaire.tauxActuel && formulaire.prixAchatHistorique && (
-                            <div className="mt-4 p-4 bg-green-50 border-2 border-green-200 rounded-lg">
-                                <p className="text-sm font-medium text-gray-700">
-                                    Marge prévisionnelle :
-                                    <span className="text-2xl font-bold text-green-600 ml-2">
-                                        {
-                                            calculeMarge(parseFloat(formulaire.tauxActuel),
-                                                parseFloat(formulaire.prixAchatHistorique))
-                                        }%
-                                    </span>
-                                </p>
-                                <p className="text-xs text-gray-600 mt-1">
-                                    Vous gagnez {(parseFloat(formulaire.tauxActuel) - parseFloat(formulaire.prixAchatHistorique)).toFixed(4)} par unité
-                                </p>
-                            </div>
-                        )}
+                       
 
                         <button
                             onClick={ajoutTaux}
@@ -213,9 +177,9 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
 
                         <div className="space-y-3">
                             {listeTaux.map((taux) => {
-                                const marge = calculeMarge(taux.tauxActuel, taux.prixAchatHistorique);
+                                
                                 // Calculer le taux inverse (1 EUR = X XOF)
-                                const tauxInverse = (1 / taux.tauxActuel);
+                                const tauxInverse = Number((1 / taux.tauxActuel).toFixed(6)) ;
 
                                 return (
                                     <div key={taux.id} className="border-2 border-gray-200 rounded-lg p-5 hover:border-indigo-300 transition-all">
@@ -226,9 +190,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                                                     <span className="text-xl font-bold text-indigo-900">
                                                         {taux.deviseDepart} ⇄ {taux.deviseArrivee}
                                                     </span>
-                                                    <span className="px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-700">
-                                                        Marge: {marge}%
-                                                    </span>
+                                                   
                                                 </div>
 
                                                 {/* NOUVEAU : Affichage des taux dans les deux sens */}
@@ -259,13 +221,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                                                     </div>
                                                 </div>
 
-                                                {/* Prix d'achat historique */}
-                                                <div className="text-sm text-gray-600">
-                                                    <span className="font-medium">Prix d'achat:</span>
-                                                    <span className="ml-2 font-bold text-gray-800">
-                                                        {taux.prixAchatHistorique}
-                                                    </span>
-                                                </div>
+                                              
                                             </div>
 
                                             {/* Bouton supprimer */}
