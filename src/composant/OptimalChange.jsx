@@ -8,120 +8,81 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2 }) {
   useEffect(() => {
     calculerChemins();
   }, []);
- const calculerChemins = () => {
+
+   // Fonction récursive pour explorer tous les chemins possibles
+  function explorerChemins(courant, arrivee, toutesDevises, cheminsTrouves, profondeurMax) {
+    const derniereDevise = courant[courant.length - 1];
+    if (derniereDevise === arrivee) {
+      cheminsTrouves.push([...courant]);
+      return;
+    }
+    if (courant.length > profondeurMax) return;
+
+    for (const devise of toutesDevises) {
+      if (!courant.includes(devise)) {
+        courant.push(devise);
+        explorerChemins(courant, arrivee, toutesDevises, cheminsTrouves, profondeurMax);
+        courant.pop();
+      }
+    }
+  }
+
+  // Fonction principale de calcul
+  function calculerChemins() {
     setCalcul(true);
     setTimeout(() => {
       const montant = parseFloat(transaction.montant);
       const depart = transaction.deviseDepart;
       const destination = transaction.deviseDestination;
+      const cheminsTrouves = [];
+      const profondeurMax = devisesIntermediaires.length + 1;
+
+      explorerChemins([depart], destination, devisesIntermediaires, cheminsTrouves, profondeurMax);
+
       const allChemins = [];
 
-      // Ajouter chemin direct et inverse
-      listeTaux.forEach(t => {
-        if (t.deviseDepart === depart && t.deviseArrivee === destination) {
-          const montantFinal = montant * t.tauxActuel;
-          allChemins.push({
-            chemin: `${depart} → ${destination}`,
-            etapes: [
-              { devise: depart, montant },
-              { devise: destination, montant: montantFinal }
-            ],
-            montantFinal,
-            details: `Direct`
-          });
-        }
-        if (t.deviseDepart === destination && t.deviseArrivee === depart) {
-          const montantFinal = montant * (1 / t.tauxActuel);
-          allChemins.push({
-            chemin: `${depart} → ${destination}`,
-            etapes: [
-              { devise: depart, montant },
-              { devise: destination, montant: montantFinal }
-            ],
-            montantFinal,
-            details: `Inverse`
-          });
-        }
-      });
+      cheminsTrouves.forEach(chemin => {
+        let montantFinal = montant;
+        let etapes = [];
+        for (let i = 0; i < chemin.length - 1; i++) {
+          const from = chemin[i];
+          const to = chemin[i + 1];
+          let taux = listeTaux.find(t => t.deviseDepart === from && t.deviseArrivee === to);
 
-      // Chemins intermédiaires
-      devisesIntermediaires.forEach(inter => {
-        if (inter === depart || inter === destination) return;
-        const taux1 = listeTaux.find(t => t.deviseDepart === depart && t.deviseArrivee === inter);
-        const taux2 = listeTaux.find(t => t.deviseDepart === inter && t.deviseArrivee === destination);
-        const taux1Inverse = listeTaux.find(t => t.deviseDepart === inter && t.deviseArrivee === depart);
-        const taux2Inverse = listeTaux.find(t => t.deviseDepart === destination && t.deviseArrivee === inter);
+          if (!taux) {
+            const tauxInverse = listeTaux.find(t => t.deviseDepart === to && t.deviseArrivee === from);
+            if (tauxInverse) {
+              taux = { tauxActuel: 1 / tauxInverse.tauxActuel };
+            } else {
+              montantFinal = null; // chemin impossible
+              break;
+            }
+          }
 
-        if (taux1 && taux2) {
-          const montantInter = montant * taux1.tauxActuel;
-          const montantFinal = montantInter * taux2.tauxActuel;
-          allChemins.push({
-            chemin: `${depart} → ${inter} → ${destination}`,
-            etapes: [
-              { devise: depart, montant },
-              { devise: inter, montant: montantInter },
-              { devise: destination, montant: montantFinal }
-            ],
-            montantFinal,
-            details: `Via ${inter}`
-          });
+          const montantEtape = montantFinal;
+          montantFinal = montantFinal * taux.tauxActuel;
+          etapes.push({ devise: from, montant: montantEtape });
         }
 
-        if (taux1Inverse && taux2) {
-          const montantInter = montant * (1 / taux1Inverse.tauxActuel);
-          const montantFinal = montantInter * taux2.tauxActuel;
+        if (montantFinal !== null) {
+          etapes.push({ devise: destination, montant: montantFinal });
           allChemins.push({
-            chemin: `${depart} → ${inter} → ${destination}`,
-            etapes: [
-              { devise: depart, montant },
-              { devise: inter, montant: montantInter },
-              { devise: destination, montant: montantFinal }
-            ],
+            chemin: chemin.join(" → "),
+            etapes,
             montantFinal,
-            details: `Via ${inter} (inverse étape 1)`
-          });
-        }
-
-        if (taux1 && taux2Inverse) {
-          const montantInter = montant * taux1.tauxActuel;
-          const montantFinal = montantInter * (1 / taux2Inverse.tauxActuel);
-          allChemins.push({
-            chemin: `${depart} → ${inter} → ${destination}`,
-            etapes: [
-              { devise: depart, montant },
-              { devise: inter, montant: montantInter },
-              { devise: destination, montant: montantFinal }
-            ],
-            montantFinal,
-            details: `Via ${inter} (inverse étape 2)`
-          });
-        }
-
-        if (taux1Inverse && taux2Inverse) {
-          const montantInter = montant * (1 / taux1Inverse.tauxActuel);
-          const montantFinal = montantInter * (1 / taux2Inverse.tauxActuel);
-          allChemins.push({
-            chemin: `${depart} → ${inter} → ${destination}`,
-            etapes: [
-              { devise: depart, montant },
-              { devise: inter, montant: montantInter },
-              { devise: destination, montant: montantFinal }
-            ],
-            montantFinal,
-            details: `Via ${inter} (inverse étape 1 & 2)`
+            details: "Direct & inverse appliqués automatiquement"
           });
         }
       });
 
-      // Trier pour le meilleur chemin
-allChemins.sort((a, b) => a.montantFinal - b.montantFinal);
-
+      allChemins.sort((a, b) => b.montantFinal - a.montantFinal);
       setChemins(allChemins);
       setCalcul(false);
       if (allChemins.length > 0) setResultat(allChemins[0]);
-    }, 1500);
-  };
-console.log(chemins)
+    }, 500); 
+  }
+
+
   return (
     <div>
 
@@ -165,7 +126,7 @@ console.log(chemins)
                 Il n'existe aucune combinaison de taux permettant de convertir {transaction.deviseDepart} en {transaction.deviseDestination}.
               </p>
               <p className="text-red-600 text-sm mt-2">
-                Retournez à l'étape 1 pour ajouter les taux manquants.
+                Retournez à l'étape 1 pour ajouter les taux.
               </p>
             </div>
           ) : (
@@ -244,8 +205,10 @@ console.log(chemins)
 
               {/* TABLEAU COMPARATIF */}
               <div className="bg-white rounded-xl shadow-lg p-6 mt-8">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">Tableau Comparatif</h3>
-                <div className="overflow-x-auto">
+                <div className="bg-blue-300 shadow-lg border-b border-gray-100 p-3">
+                   <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Recaputulatif de tous les chemins</h3>
+                </div>
+               <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b-2 border-gray-200">
