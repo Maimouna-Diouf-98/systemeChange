@@ -75,7 +75,7 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2 }) {
         }
       });
 
-      allChemins.sort((a, b) => b.montantFinal - a.montantFinal);
+      allChemins.sort((a, b) => a.montantFinal - b.montantFinal);
       setChemins(allChemins);
       setCalcul(false);
       if (allChemins.length > 0) setResultat(allChemins[0]);
