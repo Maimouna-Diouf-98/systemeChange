@@ -49,6 +49,7 @@ function SystemeChange() {
             transaction={transaction}
             setResultat={setResultatsCalcul}
             etape2={() => setEtapeActuelle(2)}
+            etape1= {() => setEtapeActuelle(1)}
           />
         )}
 

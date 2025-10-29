@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, TrendingUp } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
 
-function OptimalChange({ listeTaux = [], transaction, setResultat, etape2 }) {
+function OptimalChange({ listeTaux = [], transaction, setResultat, etape2, etape1 }) {
   const [chemins, setChemins] = useState([]);
   const [calcul, setCalcul] = useState(true);
   const devisesIntermediaires = ['XOF', 'GNF', 'XAF', 'USDT', 'EUR', 'USD', 'RMB'];
@@ -252,13 +252,20 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2 }) {
       )}
 
       {/* BOUTON RETOUR */}
-      <div className="mt-6">
+      <div className="mt-6 flex gap-3">
         <button
           onClick={etape2}
           className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 rounded-lg flex items-center justify-center gap-2 transition-all"
         >
           <ArrowLeft size={24} />
           Modifier la Transaction
+        </button>
+         <button
+          onClick={etape1}
+          className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 rounded-lg flex items-center justify-center gap-2 transition-all"
+        >
+          <ArrowRight size={24} />
+          Ajouter un Taux
         </button>
       </div>
     </div>
