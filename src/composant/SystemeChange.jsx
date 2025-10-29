@@ -9,6 +9,7 @@ function SystemeChange() {
   
   // DONNÉES PARTAGÉES : Déclarées ici pour être accessibles par toutes les étapes
   const devises = ['XOF', 'GNF', 'XAF', 'USDT', 'EUR', 'USD', 'RMB'];
+  
   const [listeTaux, setListeTaux] = useState([]);
   const [transaction, setTransaction] = useState({
     montant: '',

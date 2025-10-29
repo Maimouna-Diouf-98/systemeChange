@@ -3,13 +3,22 @@ import { useState } from 'react'
 import { toast } from 'react-toastify';
 
 function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
+    const hierarchie = {
+        USD: 1,
+        EUR: 2,
+        RMB: 3,
+        USDT: 4,
+        XOF: 5,
+        XAF: 6,
+        GNF: 7
+    };
 
     // formulaire de change 
     const [formulaire, setFormulaire] = useState({
         deviseDepart: '',
         deviseArrivee: '',
         tauxActuel: '',
-        
+
     });
     const [editId, setEditId] = useState(null);
     //mise a jour du formulaire
@@ -24,6 +33,15 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
     //     if (!prixAchat || prixAchat === 0) return 0
     //     return (((prixVente - prixAchat) / prixAchat) * 100).toFixed(6);
     // }
+    // Fonction pour déterminer quelle devise est plus forte
+    function devisesPlusFortePlusFaible(dev1, dev2) {
+        if (hierarchie[dev1] < hierarchie[dev2]) {
+            return { forte: dev1, faible: dev2 };
+        } else {
+            return { forte: dev2, faible: dev1 };
+        }
+    }
+
     const ajoutTaux = () => {
         if (!formulaire.deviseDepart || !formulaire.deviseArrivee
             || !formulaire.tauxActuel) {
@@ -31,10 +49,11 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
             return;
         }
 
+        const {forte,faible}= devisesPlusFortePlusFaible(formulaire.deviseDepart,formulaire.deviseArrivee)
         if (!editId) {
             const existe = listeTaux.some(t =>
-                (t.deviseDepart === formulaire.deviseDepart && t.deviseArrivee === formulaire.deviseArrivee) ||
-                (t.deviseDepart === formulaire.deviseArrivee && t.deviseArrivee === formulaire.deviseDepart)
+                (t.deviseDepart === forte && t.deviseArrivee === faible) ||
+                (t.deviseDepart === faible && t.deviseArrivee === forte)
             );
 
             if (existe) {
@@ -42,15 +61,16 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                 return;
             }
         }
+       
         if (editId) {
             // Mode édition → mise à jour
             const updated = listeTaux.map(t =>
                 t.id === editId
                     ? {
                         ...t,
-                        deviseDepart: formulaire.deviseDepart,
-                        deviseArrivee: formulaire.deviseArrivee,
-                        tauxActuel:Number(parseFloat(formulaire.tauxActuel)),
+                        deviseDepart: forte,
+                        deviseArrivee:faible,
+                        tauxActuel:Number(parseFloat(formulaire.tauxActuel)) ,
                     }
                     : t
             );
@@ -61,21 +81,22 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
             // Mode ajout
             const nouveauTaux = {
                 id: Date.now(),
-                deviseDepart: formulaire.deviseDepart,
-                deviseArrivee: formulaire.deviseArrivee,
-                tauxActuel:Number( parseFloat(formulaire.tauxActuel).toFixed(6)),
-                
+                deviseDepart: forte,
+                deviseArrivee: faible,
+                tauxActuel:Number(parseFloat(formulaire.tauxActuel)),
+
             };
             setListeTaux(prev => [...prev, nouveauTaux]);
             toast.success("Taux ajouté avec succès ");
         }
+
 
         // Reset formulaire
         setFormulaire({
             deviseDepart: '',
             deviseArrivee: '',
             tauxActuel: '',
-          
+
         });
     }
     const editTaux = (taux) => {
@@ -83,7 +104,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
             deviseDepart: taux.deviseDepart,
             deviseArrivee: taux.deviseArrivee,
             tauxActuel: taux.tauxActuel,
-            
+
         });
         setEditId(taux.id);
     };
@@ -92,7 +113,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
         setListeTaux(prev => prev.filter(taux => taux.id !== id))
     }
 
-
+console.log(listeTaux)
     return (
         <div className='"min-h-screen  p-6'>
             <div className="max-w-5xl mx-auto">
@@ -138,7 +159,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                             <p className="text-xs text-gray-500 mt-1">Différente de la devise de départ</p>
 
                         </div>
-                         <div className=''>
+                        <div className=''>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 4️⃣ Taux d'Achat
                             </label>
@@ -151,9 +172,9 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
 
                                 className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
                             />
-                           
+
                         </div>
-                       
+
 
                         <button
                             onClick={ajoutTaux}
@@ -177,9 +198,9 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
 
                         <div className="space-y-3">
                             {listeTaux.map((taux) => {
-                                
+
                                 // Calculer le taux inverse (1 EUR = X XOF)
-                                const tauxInverse = Number((1 / taux.tauxActuel).toFixed(6)) ;
+                                const tauxInverse = Number((1 / taux.tauxActuel).toFixed(6));
 
                                 return (
                                     <div key={taux.id} className="border-2 border-gray-200 rounded-lg p-5 hover:border-indigo-300 transition-all">
@@ -190,7 +211,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                                                     <span className="text-xl font-bold text-indigo-900">
                                                         {taux.deviseDepart} ⇄ {taux.deviseArrivee}
                                                     </span>
-                                                   
+
                                                 </div>
 
                                                 {/* NOUVEAU : Affichage des taux dans les deux sens */}
@@ -221,7 +242,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                                                     </div>
                                                 </div>
 
-                                              
+
                                             </div>
 
                                             {/* Bouton supprimer */}
