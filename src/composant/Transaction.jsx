@@ -23,37 +23,56 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
     if (tauxDirect) {
       const montantFinal = parseFloat(transaction.montant) * parseFloat(tauxDirect.tauxActuel)
       const tauxInverse = 1 / parseFloat(tauxDirect.tauxActuel)
+      const montantFinalVente = tauxDirect.tauxVente > 0
+        ? parseFloat(transaction.montant) * parseFloat(tauxDirect.tauxVente)
+        : null;
+      const tauxVenteInverse = 1 / parseFloat(tauxDirect.tauxVente)
       return {
         existe: true,
         sensDirect: true,
         montantFinal: montantFinal.toFixed(6),
+        montantFinalVente: montantFinalVente?.toFixed(6) || "-",
         taux: parseFloat(tauxDirect.tauxActuel),
-        tauxInverse: tauxInverse
+        tauxVente: parseFloat(tauxDirect.tauxVente),
+        tauxVenteInverse: tauxVenteInverse,
+        tauxInverse: tauxInverse,
       };
     }
 
-    // Recherche du taux inverse
     const tauxInverse = listeTaux.find(taux =>
       taux.deviseDepart === transaction.deviseDestination &&
       taux.deviseArrivee === transaction.deviseDepart
-    )
+    );
 
     if (tauxInverse) {
-      const tauxCalcule = 1 / parseFloat(tauxInverse.tauxActuel);
-      const montantFinal = parseFloat(transaction.montant) * tauxCalcule
+      const tauxCalcule = 1 / parseFloat(tauxInverse.tauxVente);
+
+      const tauxVenteInverse = 1 / parseFloat(tauxInverse.tauxActuel);
+
+      const montantFinal = parseFloat(transaction.montant) * tauxCalcule;
+
+      const montantFinalVente = tauxInverse.tauxVente > 0
+        ? parseFloat(transaction.montant) * tauxVenteInverse
+        : null;
+
       return {
         existe: true,
         sensDirect: false,
         montantFinal: montantFinal.toFixed(6),
+        montantFinalVente: montantFinalVente?.toFixed(6) || "-",
         taux: tauxCalcule,
-        tauxInverse: parseFloat(tauxInverse.tauxActuel)
+        tauxVente: tauxVenteInverse,
+        tauxInverse: parseFloat(tauxInverse.tauxActuel),
+        tauxVenteInverse: parseFloat(tauxInverse.tauxVente),
       };
     }
+
 
     return { existe: false };
   }
 
   const apercu = calculeTransaction()
+
   const formulaireComplet = transaction.montant && transaction.deviseDepart && transaction.deviseDestination;
 
   return (
@@ -140,7 +159,7 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
           <div className={`p-6 rounded-lg border-2 ${apercu.existe
             ? 'bg-green-50 border-green-500'
             : 'bg-yellow-50 border-yellow-500'
-          }`}>
+            }`}>
             {apercu.existe ? (
               <div>
                 <div className="flex items-center gap-2 mb-4">
@@ -148,9 +167,9 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
                     ✓ Taux disponible
                   </div>
                 </div>
-
+                {/* calcule d'achat*/}
                 <div className="bg-white rounded-lg p-5 border-2 border-green-200">
-                  <p className="text-xs text-gray-600 mb-3 font-semibold uppercase">Taux de change</p>
+                  <p className="text-xs text-gray-600 mb-3 font-semibold uppercase">Taux de change d'achat</p>
                   <div className="space-y-3">
                     {/* Sens direct */}
                     <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-3">
@@ -191,7 +210,63 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
                     </div>
                   </div>
                 </div>
+                {/* calcule de vente*/}
+                <div className="bg-white rounded-lg my-5 p-5 border-2 border-green-200">
+                  <p className="text-xs text-gray-600 mb-3 font-semibold uppercase">Taux de change de vente</p>
+                  <div className="space-y-3">
+                    {/* Sens direct */}
+                    <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-blue-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">
+                          →
+                        </span>
+                        <span className="text-sm font-medium">
+                          1 {transaction.deviseDepart} =
+                          <span className="ml-2 text-lg font-bold text-blue-700">
+                            {apercu.tauxVente.toFixed(6)}
+                          </span>
+                          <span className="ml-1 font-bold text-blue-700">
+                            {transaction.deviseDestination}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Sens inverse */}
+                    <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-purple-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">
+                          ←
+                        </span>
+                        <span className="text-sm font-medium">
+                          1 {transaction.deviseDestination} =
+                          <span className="ml-2 text-lg font-bold text-purple-700">
+                            {typeof apercu.tauxVenteInverse === 'number'
+                              ? apercu.tauxVenteInverse.toFixed(6)
+                              : parseFloat(apercu.tauxVenteInverse || 0).toFixed(6)}
+                          </span>
+                          <span className="ml-1 font-bold text-purple-700">
+                            {transaction.deviseDepart}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* calcule montant*/}
+                {/* <div className="space-y-2 bg-white rounded-lg my-5 p-5 border-2 border-green-200">
+                  <p className="font-bold text-blue-700">
+                    Montant Achat : {apercu.montantFinal} {transaction.deviseDestination}
+                  </p>
+                  <p className="font-bold text-green-700">
+                    Montant Vente : {apercu.montantFinalVente} {transaction.deviseDestination}
+                  </p>
+                </div> */}
               </div>
+
+
+
+
             ) : (
               <div>
                 <div className="bg-yellow-600 text-white px-3 py-1 rounded-full text-sm font-bold inline-block mb-3">
@@ -222,7 +297,7 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
           className={`flex-1 py-4 rounded-lg font-bold text-lg flex items-center justify-center gap-2 ${formulaireComplet
             ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg'
             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
+            }`}
         >
           Calculer les Chemins
           <ArrowRight size={24} />

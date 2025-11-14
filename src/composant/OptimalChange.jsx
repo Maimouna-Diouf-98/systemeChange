@@ -9,7 +9,7 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2, etape
     calculerChemins();
   }, []);
 
-   // Fonction récursive pour explorer tous les chemins possibles
+  // Fonction récursive pour explorer tous les chemins possibles
   function explorerChemins(courant, arrivee, toutesDevises, cheminsTrouves, profondeurMax) {
     const derniereDevise = courant[courant.length - 1];
     if (derniereDevise === arrivee) {
@@ -26,61 +26,94 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2, etape
       }
     }
   }
+function calculerChemins() {
+  setCalcul(true);
+  setTimeout(() => {
+    const montant = parseFloat(transaction.montant);
+    const depart = transaction.deviseDepart;
+    const destination = transaction.deviseDestination;
+    const cheminsTrouves = [];
+    const profondeurMax = devisesIntermediaires.length + 1;
 
-  // Fonction principale de calcul
-  function calculerChemins() {
-    setCalcul(true);
-    setTimeout(() => {
-      const montant = parseFloat(transaction.montant);
-      const depart = transaction.deviseDepart;
-      const destination = transaction.deviseDestination;
-      const cheminsTrouves = [];
-      const profondeurMax = devisesIntermediaires.length + 1;
+    explorerChemins([depart], destination, devisesIntermediaires, cheminsTrouves, profondeurMax);
 
-      explorerChemins([depart], destination, devisesIntermediaires, cheminsTrouves, profondeurMax);
+    const allChemins = [];
 
-      const allChemins = [];
+    cheminsTrouves.forEach(chemin => {
+      let montantFinal = montant;
+      let montantFinalVente = null;
+      let tauxPrincipal = null;
+      let etapes = [];
+      let isDirect = chemin.length === 2;
 
-      cheminsTrouves.forEach(chemin => {
-        let montantFinal = montant;
-        let etapes = [];
-        for (let i = 0; i < chemin.length - 1; i++) {
-          const from = chemin[i];
-          const to = chemin[i + 1];
-          let taux = listeTaux.find(t => t.deviseDepart === from && t.deviseArrivee === to);
+      for (let i = 0; i < chemin.length - 1; i++) {
+        const from = chemin[i];
+        const to = chemin[i + 1];
 
-          if (!taux) {
-            const tauxInverse = listeTaux.find(t => t.deviseDepart === to && t.deviseArrivee === from);
-            if (tauxInverse) {
-              taux = { tauxActuel: 1 / tauxInverse.tauxActuel };
-            } else {
-              montantFinal = null; // chemin impossible
-              break;
-            }
+        let taux = listeTaux.find(t => t.deviseDepart === from && t.deviseArrivee === to);
+        let tauxInverse = null;
+
+        if (!taux) {
+          tauxInverse = listeTaux.find(t => t.deviseDepart === to && t.deviseArrivee === from);
+          if (tauxInverse) {
+            taux = { tauxActuel: 1 / parseFloat(tauxInverse.tauxActuel), tauxVente: tauxInverse.tauxVente };
+          } else {
+            montantFinal = null; 
+            break;
           }
-
-          const montantEtape = montantFinal;
-          montantFinal = montantFinal * taux.tauxActuel;
-          etapes.push({ devise: from, montant: montantEtape });
         }
 
-        if (montantFinal !== null) {
-          etapes.push({ devise: destination, montant: montantFinal });
-          allChemins.push({
-            chemin: chemin.join(" → "),
-            etapes,
-            montantFinal,
-            details: "Direct & inverse appliqués automatiquement"
-          });
+        if (taux.tauxVente && !tauxPrincipal) {
+          tauxPrincipal = taux;
         }
-      });
 
-      allChemins.sort((a, b) => a.montantFinal - b.montantFinal);
-      setChemins(allChemins);
-      setCalcul(false);
-      if (allChemins.length > 0) setResultat(allChemins[0]);
-    }, 500); 
-  }
+        const montantEtape = montantFinal;
+        montantFinal = montantFinal * parseFloat(taux.tauxActuel);
+        etapes.push({ devise: from, montant: montantEtape });
+      }
+
+      if (montantFinal !== null) {
+        etapes.push({ devise: chemin[chemin.length - 1], montant: montantFinal });
+
+        if (tauxPrincipal) {
+       
+          if (tauxPrincipal.deviseDepart === depart) {
+            montantFinalVente = montant * parseFloat(tauxPrincipal.tauxVente);
+          } else {
+            montantFinalVente = montant / parseFloat(tauxPrincipal.tauxVente);
+          }
+        }
+
+        const marge = montantFinalVente !== null ? montantFinal - montantFinalVente : null;
+
+        allChemins.push({
+          chemin: chemin.join(" → "),
+          etapes,
+          montantFinal,
+          montantFinalVente: montantFinalVente ? montantFinalVente.toFixed(6) : null,
+          marge: marge !== null ? marge.toFixed(6) : null,
+          details: isDirect && montantFinalVente
+            ? "Chemin direct avec taux de vente & taux actuel"
+            : isDirect
+              ? "Chemin direct (achat uniquement)"
+              : "Chemin multi-étapes (achat uniquement)"
+        });
+      }
+    });
+
+
+    allChemins.sort((a, b) => {
+
+      if (a.marge && b.marge) return parseFloat(b.marge) - parseFloat(a.marge);
+      return b.montantFinal - a.montantFinal;
+    });
+
+    setChemins(allChemins);
+    console.log(allChemins);
+    setCalcul(false);
+    if (allChemins.length > 0) setResultat(allChemins[0]);
+  }, 500);
+}
 
 
   return (
@@ -139,8 +172,8 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2, etape
                 <div
                   key={index}
                   className={`border-2 rounded-xl p-6 transition-all ${index === 0
-                      ? 'border-green-500 bg-green-50 shadow-xl'
-                      : 'border-gray-200 bg-white hover:border-indigo-300'
+                    ? 'border-green-500 bg-green-50 shadow-xl'
+                    : 'border-gray-200 bg-white hover:border-indigo-300'
                     }`}
                 >
                   {/* BADGE OPTIMAL */}
@@ -169,10 +202,10 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2, etape
                         <React.Fragment key={idx}>
                           <div className="text-center">
                             <div className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-lg mb-2 ${idx === 0
-                                ? 'bg-blue-100 text-blue-700'
-                                : idx === chemin.etapes.length - 1
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-yellow-100 text-yellow-700'
+                              ? 'bg-blue-100 text-blue-700'
+                              : idx === chemin.etapes.length - 1
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-yellow-100 text-yellow-700'
                               }`}>
                               {etape.devise}
                             </div>
@@ -190,31 +223,44 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2, etape
                   </div>
 
                   {/* MONTANT FINAL */}
-                  <div className={`p-4 rounded-lg ${index === 0 ? 'bg-green-100' : 'bg-gray-100'
-                    }`}>
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-700">Vous recevrez :</span>
-                      <span className={`text-2xl font-bold ${index === 0 ? 'text-green-700' : 'text-gray-800'
-                        }`}>
-                        {chemin.montantFinal.toFixed(6)} {transaction.deviseDestination}
-                      </span>
+                  <div className={`p-4 rounded-lg ${index === 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between  bg-white border border-gray-200 rounded-lg p-4 mb-4">
+                        <span className="font-medium text-gray-700">Vous recevrez :</span>
+                        <span className={`text-2xl font-bold ${index === 0 ? 'text-green-700' : 'text-gray-800'}`}>
+                          {chemin.montantFinal.toFixed(6)} {transaction.deviseDestination}
+                        </span>
+                      </div>
+
+                      {/* Affichage du montant de vente pour le chemin direct */}
+                      {chemin.montantFinalVente && (
+                        <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4 mb-4 ">
+                          <span className="font-medium text-gray-700">Montant Vente :</span>
+                          <span className="text-2xl font-bold text-blue-500">
+                            {chemin.montantFinalVente} {transaction.deviseDestination}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
+
                 </div>
               ))}
 
               {/* TABLEAU COMPARATIF */}
               <div className="bg-white rounded-xl shadow-lg p-6 mt-8">
                 <div className="bg-blue-300 shadow-lg border-b border-gray-100 p-3">
-                   <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Recaputulatif de tous les chemins</h3>
+                  <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Recaputulatif de tous les chemins</h3>
                 </div>
-               <div className="overflow-x-auto">
+                <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b-2 border-gray-200">
                         <th className="text-left py-3 px-4 font-bold text-gray-700">Rang</th>
                         <th className="text-left py-3 px-4 font-bold text-gray-700">Chemin</th>
-                        <th className="text-right py-3 px-4 font-bold text-gray-700">Montant Final</th>
+                        <th className="text-right py-3 px-4 font-bold text-gray-700">Montant Final Taux Vente</th>
+                        <th className="text-right py-3 px-4 font-bold text-gray-700">Montant Final Taux Achat</th>
+                        <th className="text-right py-3 px-4 font-bold text-gray-700">Marge</th>
 
                       </tr>
                     </thead>
@@ -235,7 +281,13 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2, etape
                           </td>
                           <td className="py-3 px-4 font-medium text-gray-800">{chemin.chemin}</td>
                           <td className="py-3 px-4 text-right font-bold text-gray-900">
+                            {chemin.montantFinalVente} {transaction.deviseDestination}
+                          </td>
+                          <td className="py-3 px-4 text-right font-bold text-gray-900">
                             {chemin.montantFinal.toFixed(6)} {transaction.deviseDestination}
+                          </td>
+                          <td className="py-3 px-4 text-right font-bold text-indigo-700">
+                            {chemin.marge ? `${chemin.marge} ${transaction.deviseDestination}` : "-"}
                           </td>
 
                         </tr>
@@ -260,7 +312,7 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2, etape
           <ArrowLeft size={24} />
           Modifier la Transaction
         </button>
-         <button
+        <button
           onClick={etape1}
           className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 rounded-lg flex items-center justify-center gap-2 transition-all"
         >
