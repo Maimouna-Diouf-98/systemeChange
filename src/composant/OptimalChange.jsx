@@ -5,9 +5,19 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2, etape
   const [chemins, setChemins] = useState([]);
   const [calcul, setCalcul] = useState(true);
   const devisesIntermediaires = ['XOF', 'GNF', 'XAF', 'USDT', 'EUR', 'USD', 'RMB'];
+  
   useEffect(() => {
     calculerChemins();
   }, []);
+
+  // Fonction pour formater les nombres avec séparateurs
+  const formaterNombre = (nombre) => {
+    if (!nombre && nombre !== 0) return '-';
+    return parseFloat(nombre).toLocaleString('fr-FR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6
+    });
+  };
 
   // Fonction récursive pour explorer tous les chemins possibles
   function explorerChemins(courant, arrivee, toutesDevises, cheminsTrouves, profondeurMax) {
@@ -26,107 +36,102 @@ function OptimalChange({ listeTaux = [], transaction, setResultat, etape2, etape
       }
     }
   }
-function calculerChemins() {
-  setCalcul(true);
-  setTimeout(() => {
-    const montant = parseFloat(transaction.montant);
-    const depart = transaction.deviseDepart;
-    const destination = transaction.deviseDestination;
-    const cheminsTrouves = [];
-    const profondeurMax = devisesIntermediaires.length + 1;
+  
+  function calculerChemins() {
+    setCalcul(true);
+    setTimeout(() => {
+      const montant = parseFloat(transaction.montant);
+      const depart = transaction.deviseDepart;
+      const destination = transaction.deviseDestination;
+      const cheminsTrouves = [];
+      const profondeurMax = devisesIntermediaires.length + 1;
 
-    explorerChemins([depart], destination, devisesIntermediaires, cheminsTrouves, profondeurMax);
+      explorerChemins([depart], destination, devisesIntermediaires, cheminsTrouves, profondeurMax);
 
-    const allChemins = [];
+      const allChemins = [];
 
-    cheminsTrouves.forEach(chemin => {
-      let montantFinal = montant;
-      let montantFinalVente = null;
-      let tauxPrincipal = null;
-      let etapes = [];
-      let isDirect = chemin.length === 2;
+      cheminsTrouves.forEach(chemin => {
+        let montantFinal = montant;
+        let montantFinalVente = null;
+        let tauxPrincipal = null;
+        let etapes = [];
+        let isDirect = chemin.length === 2;
 
-      for (let i = 0; i < chemin.length - 1; i++) {
-        const from = chemin[i];
-        const to = chemin[i + 1];
+        for (let i = 0; i < chemin.length - 1; i++) {
+          const from = chemin[i];
+          const to = chemin[i + 1];
 
-        let taux = listeTaux.find(t => t.deviseDepart === from && t.deviseArrivee === to);
-        let tauxInverse = null;
+          let taux = listeTaux.find(t => t.deviseDepart === from && t.deviseArrivee === to);
+          let tauxInverse = null;
 
-        if (!taux) {
-          tauxInverse = listeTaux.find(t => t.deviseDepart === to && t.deviseArrivee === from);
-          if (tauxInverse) {
-            taux = { tauxActuel: 1 / parseFloat(tauxInverse.tauxActuel), tauxVente: tauxInverse.tauxVente };
-          } else {
-            montantFinal = null; 
-            break;
+          if (!taux) {
+            tauxInverse = listeTaux.find(t => t.deviseDepart === to && t.deviseArrivee === from);
+            if (tauxInverse) {
+              taux = { tauxActuel: 1 / parseFloat(tauxInverse.tauxActuel), tauxVente: tauxInverse.tauxVente };
+            } else {
+              montantFinal = null; 
+              break;
+            }
           }
-        }
 
-        if (taux.tauxVente && !tauxPrincipal) {
-          tauxPrincipal = taux;
-        }
-
-        const montantEtape = montantFinal;
-        montantFinal = montantFinal * parseFloat(taux.tauxActuel);
-        etapes.push({ devise: from, montant: montantEtape });
-      }
-
-      if (montantFinal !== null) {
-        etapes.push({ devise: chemin[chemin.length - 1], montant: montantFinal });
-
-        if (tauxPrincipal) {
-       
-          if (tauxPrincipal.deviseDepart === depart) {
-            montantFinalVente = montant * parseFloat(tauxPrincipal.tauxVente);
-          } else {
-            montantFinalVente = montant / parseFloat(tauxPrincipal.tauxVente);
+          if (taux.tauxVente && !tauxPrincipal) {
+            tauxPrincipal = taux;
           }
+
+          const montantEtape = montantFinal;
+          montantFinal = montantFinal * parseFloat(taux.tauxActuel);
+          etapes.push({ devise: from, montant: montantEtape });
         }
 
-        const marge = montantFinalVente !== null ? montantFinal - montantFinalVente : null;
+        if (montantFinal !== null) {
+          etapes.push({ devise: chemin[chemin.length - 1], montant: montantFinal });
 
-        allChemins.push({
-          chemin: chemin.join(" → "),
-          etapes,
-          montantFinal,
-          montantFinalVente: montantFinalVente ? montantFinalVente.toFixed(6) : null,
-          marge: marge !== null ? marge.toFixed(6) : null,
-          details: isDirect && montantFinalVente
-            ? "Chemin direct avec taux de vente & taux actuel"
-            : isDirect
-              ? "Chemin direct (achat uniquement)"
-              : "Chemin multi-étapes (achat uniquement)"
-        });
-      }
-    });
+          if (tauxPrincipal) {
+            if (tauxPrincipal.deviseDepart === depart) {
+              montantFinalVente = montant * parseFloat(tauxPrincipal.tauxVente);
+            } else {
+              montantFinalVente = montant / parseFloat(tauxPrincipal.tauxVente);
+            }
+          }
 
+          const marge = montantFinalVente !== null ? montantFinal - montantFinalVente : null;
 
-    allChemins.sort((a, b) => {
+          allChemins.push({
+            chemin: chemin.join(" → "),
+            etapes,
+            montantFinal,
+            montantFinalVente: montantFinalVente ? montantFinalVente.toFixed(6) : null,
+            marge: marge !== null ? marge.toFixed(6) : null,
+            details: isDirect && montantFinalVente
+              ? "Chemin direct avec taux de vente & taux actuel"
+              : isDirect
+                ? "Chemin direct (achat uniquement)"
+                : "Chemin multi-étapes (achat uniquement)"
+          });
+        }
+      });
 
-      if (a.marge && b.marge) return parseFloat(b.marge) - parseFloat(a.marge);
-      return b.montantFinal - a.montantFinal;
-    });
+      allChemins.sort((a, b) => {
+        if (a.marge && b.marge) return parseFloat(b.marge) - parseFloat(a.marge);
+        return b.montantFinal - a.montantFinal;
+      });
 
-    setChemins(allChemins);
-    console.log(allChemins);
-    setCalcul(false);
-    if (allChemins.length > 0) setResultat(allChemins[0]);
-  }, 500);
-}
-
+      setChemins(allChemins);
+      console.log(allChemins);
+      setCalcul(false);
+      if (allChemins.length > 0) setResultat(allChemins[0]);
+    }, 500);
+  }
 
   return (
     <div>
-
-
       {/* RÉCAPITULATIF DE LA TRANSACTION */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
         <h3 className="font-bold text-gray-800 mb-3">Récapitulatif</h3>
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-gray-600">Montant</p>
-            <p className="text-2xl font-bold text-indigo-900">{transaction.montant}</p>
+            <p className="text-2xl font-bold text-indigo-900">{formaterNombre(transaction.montant)}</p>
           </div>
           <div className="text-center p-4 bg-green-50 rounded-lg">
             <p className="text-sm text-gray-600">De</p>
@@ -145,7 +150,6 @@ function calculerChemins() {
           <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600 mb-4"></div>
           <h3 className="text-xl font-bold text-gray-800 mb-2">Calcul en cours...</h3>
           <p className="text-gray-600">Analyse de tous les chemins possibles</p>
-
         </div>
       )}
 
@@ -183,7 +187,6 @@ function calculerChemins() {
                         <TrendingUp size={16} />
                         CHEMIN OPTIMAL
                       </span>
-
                     </div>
                   )}
 
@@ -192,7 +195,6 @@ function calculerChemins() {
                     <div>
                       <h3 className="text-xl font-bold text-gray-800 mb-1">{chemin.chemin}</h3>
                     </div>
-
                   </div>
 
                   {/* VISUALISATION DES ÉTAPES */}
@@ -210,7 +212,7 @@ function calculerChemins() {
                               {etape.devise}
                             </div>
                             <p className="text-lg font-bold text-gray-800">
-                              {etape.montant.toFixed(6)}
+                              {formaterNombre(etape.montant)}
                             </p>
                           </div>
 
@@ -225,32 +227,31 @@ function calculerChemins() {
                   {/* MONTANT FINAL */}
                   <div className={`p-4 rounded-lg ${index === 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
                     <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between  bg-white border border-gray-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4 mb-4">
                         <span className="font-medium text-gray-700">Vous recevrez :</span>
                         <span className={`text-2xl font-bold ${index === 0 ? 'text-green-700' : 'text-gray-800'}`}>
-                          {chemin.montantFinal.toFixed(6)} {transaction.deviseDestination}
+                          {formaterNombre(chemin.montantFinal)} {transaction.deviseDestination}
                         </span>
                       </div>
 
                       {/* Affichage du montant de vente pour le chemin direct */}
                       {chemin.montantFinalVente && (
-                        <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4 mb-4 ">
+                        <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4 mb-4">
                           <span className="font-medium text-gray-700">Montant Vente :</span>
                           <span className="text-2xl font-bold text-blue-500">
-                            {chemin.montantFinalVente} {transaction.deviseDestination}
+                            {formaterNombre(chemin.montantFinalVente)} {transaction.deviseDestination}
                           </span>
                         </div>
                       )}
                     </div>
                   </div>
-
                 </div>
               ))}
 
               {/* TABLEAU COMPARATIF */}
               <div className="bg-white rounded-xl shadow-lg p-6 mt-8">
                 <div className="bg-blue-300 shadow-lg border-b border-gray-100 p-3">
-                  <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Recaputulatif de tous les chemins</h3>
+                  <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Récapitulatif de tous les chemins</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -261,13 +262,11 @@ function calculerChemins() {
                         <th className="text-right py-3 px-4 font-bold text-gray-700">Montant Final Taux Vente</th>
                         <th className="text-right py-3 px-4 font-bold text-gray-700">Montant Final Taux Achat</th>
                         <th className="text-right py-3 px-4 font-bold text-gray-700">Marge</th>
-
                       </tr>
                     </thead>
                     <tbody>
                       {chemins.map((chemin, index) => (
-                        <tr key={index} className={`border-b border-gray-100 ${index === 0 ? 'bg-green-50' : ''
-                          }`}>
+                        <tr key={index} className={`border-b border-gray-100 ${index === 0 ? 'bg-green-50' : ''}`}>
                           <td className="py-3 px-4">
                             {index === 0 ? (
                               <span className="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
@@ -281,23 +280,20 @@ function calculerChemins() {
                           </td>
                           <td className="py-3 px-4 font-medium text-gray-800">{chemin.chemin}</td>
                           <td className="py-3 px-4 text-right font-bold text-gray-900">
-                            {chemin.montantFinalVente} {transaction.deviseDestination}
+                            {formaterNombre(chemin.montantFinalVente)} {transaction.deviseDestination}
                           </td>
                           <td className="py-3 px-4 text-right font-bold text-gray-900">
-                            {chemin.montantFinal.toFixed(6)} {transaction.deviseDestination}
+                            {formaterNombre(chemin.montantFinal)} {transaction.deviseDestination}
                           </td>
                           <td className="py-3 px-4 text-right font-bold text-indigo-700">
-                            {chemin.marge ? `${chemin.marge} ${transaction.deviseDestination}` : "-"}
+                            {chemin.marge ? `${formaterNombre(chemin.marge)} ${transaction.deviseDestination}` : "-"}
                           </td>
-
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               </div>
-
-
             </div>
           )}
         </>

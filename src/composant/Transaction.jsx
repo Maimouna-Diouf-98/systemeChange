@@ -3,6 +3,10 @@ import React from 'react'
 
 function Transaction({ devises = [], listeTaux = [], transaction, setTransaction, etape1, etape3 }) {
   const handleformChange = (champ, valeur) => {
+    if (champ === 'montant') {
+      // Enlever les espaces et garder seulement les chiffres et le point
+      valeur = valeur.replace(/\s/g, '').replace(',', '.')
+    }
     setTransaction(prev => ({
       ...prev,
       [champ]: valeur
@@ -102,11 +106,10 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
           </label>
           <div className="relative">
             <input
-              type="number"
-              step="0.01"
-              value={transaction.montant}
+              type="text"
+              value={transaction.montant ? parseFloat(transaction.montant).toLocaleString('fr-FR') : ''}
               onChange={(e) => handleformChange('montant', e.target.value)}
-              placeholder="Ex: 100000"
+              placeholder="Ex: 100 000"
               className="w-full p-4 pr-20 border-2 border-gray-300 rounded-lg text-2xl font-bold focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             />
             {transaction.deviseDepart && (
@@ -211,7 +214,8 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
                   </div>
                 </div>
                 {/* calcule de vente*/}
-                <div className="bg-white rounded-lg my-5 p-5 border-2 border-green-200">
+                {apercu.tauxVente > 0 &&(
+                   <div className="bg-white rounded-lg my-5 p-5 border-2 border-green-200">
                   <p className="text-xs text-gray-600 mb-3 font-semibold uppercase">Taux de change de vente</p>
                   <div className="space-y-3">
                     {/* Sens direct */}
@@ -253,15 +257,9 @@ function Transaction({ devises = [], listeTaux = [], transaction, setTransaction
                     </div>
                   </div>
                 </div>
-                {/* calcule montant*/}
-                {/* <div className="space-y-2 bg-white rounded-lg my-5 p-5 border-2 border-green-200">
-                  <p className="font-bold text-blue-700">
-                    Montant Achat : {apercu.montantFinal} {transaction.deviseDestination}
-                  </p>
-                  <p className="font-bold text-green-700">
-                    Montant Vente : {apercu.montantFinalVente} {transaction.deviseDestination}
-                  </p>
-                </div> */}
+                )}
+               
+               
               </div>
 
 

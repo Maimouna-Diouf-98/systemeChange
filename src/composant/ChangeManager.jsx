@@ -22,8 +22,13 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
 
     });
     const [editId, setEditId] = useState(null);
+    const [showTauxVente, setShowTauxVente] = useState(false)
     //mise a jour du formulaire
     const handleformChange = (champ, valeur) => {
+        if (champ === 'tauxActuel' || champ === 'tauxVente') {
+            valeur = valeur.replace(',', '.');
+        }
+
         setFormulaire(prev => ({
             ...prev,
             [champ]: valeur
@@ -38,69 +43,72 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
         }
     }
 
-  const ajoutTaux = () => {
-    if (!formulaire.deviseDepart || !formulaire.deviseArrivee || !formulaire.tauxActuel) {
-        toast.info('Veuillez remplir tous les champs obligatoires');
-        return;
-    }
+    const ajoutTaux = () => {
+        if (!formulaire.deviseDepart || !formulaire.deviseArrivee || !formulaire.tauxActuel) {
+            toast.info('Veuillez remplir tous les champs obligatoires');
+            return;
+        }
 
-    const { forte, faible } = devisesPlusFortePlusFaible(
-        formulaire.deviseDepart,
-        formulaire.deviseArrivee
-    );
-
-    // Vérifier si le couple existe déjà
-    const existe = listeTaux.some(t =>
-        (t.deviseDepart === forte && t.deviseArrivee === faible) ||
-        (t.deviseDepart === faible && t.deviseArrivee === forte)
-    );
-
-    if (!editId && existe) {
-        toast.error("Ce couple de devises est déjà enregistré !");
-        return;
-    }
-
-    if (editId) {
-        // Mode édition → mise à jour
-        const updated = listeTaux.map(t =>
-            t.id === editId
-                ? {
-                    ...t,
-                    deviseDepart: forte,
-                    deviseArrivee: faible,
-                    tauxActuel: Number(parseFloat(formulaire.tauxActuel)),
-                    // Ne modifie le taux de vente que si le champ n'est pas vide
-                    tauxVente: formulaire.tauxVente !== ''
-                        ? Number(parseFloat(formulaire.tauxVente))
-                        : t.tauxVente,
-                }
-                : t
+        const { forte, faible } = devisesPlusFortePlusFaible(
+            formulaire.deviseDepart,
+            formulaire.deviseArrivee
         );
-        setListeTaux(updated);
-        setEditId(null);
-        toast.success("Taux modifié avec succès !");
-    } else {
-        // Mode ajout
-        const nouveauTaux = {
-            id: Date.now(),
-            deviseDepart: forte,
-            deviseArrivee: faible,
-            tauxActuel: Number(parseFloat(formulaire.tauxActuel)),
-            // Si pas de taux de vente, on met 0
-            tauxVente: formulaire.tauxVente !== '' 
-                ? Number(parseFloat(formulaire.tauxVente)) 
-                : 0,
-        };
-        setListeTaux(prev => [...prev, nouveauTaux]);
-        toast.success("Taux ajouté avec succès !");
-    }
 
-    // Reset formulaire
-    setFormulaire({ deviseDepart: '', deviseArrivee: '', tauxActuel: '', tauxVente: '' });
+        // Vérifier si le couple existe déjà
+        const existe = listeTaux.some(t =>
+            (t.deviseDepart === forte && t.deviseArrivee === faible) ||
+            (t.deviseDepart === faible && t.deviseArrivee === forte)
+        );
 
-    // Scroll vers le formulaire
-    formRef.current?.scrollIntoView({ behavior: 'smooth' });
-};
+        if (!editId && existe) {
+            toast.error("Ce couple de devises est déjà enregistré !");
+            return;
+        }
+
+        if (editId) {
+            // Mode édition → mise à jour
+            const updated = listeTaux.map(t =>
+                t.id === editId
+                    ? {
+                        ...t,
+                        deviseDepart: forte,
+                        deviseArrivee: faible,
+                        tauxActuel: Number(parseFloat(formulaire.tauxActuel)),
+                        // Ne modifie le taux de vente que si le champ n'est pas vide
+                        tauxVente: formulaire.tauxVente !== ''
+                            ? Number(parseFloat(formulaire.tauxVente))
+                            : t.tauxVente,
+                    }
+                    : t
+            );
+            setListeTaux(updated);
+            setEditId(null);
+            toast.success("Taux modifié avec succès !");
+           
+        } else {
+            // Mode ajout
+            const nouveauTaux = {
+                id: Date.now(),
+                deviseDepart: forte,
+                deviseArrivee: faible,
+                tauxActuel: Number(parseFloat(formulaire.tauxActuel)),
+                // Si pas de taux de vente, on met 0
+                tauxVente: formulaire.tauxVente !== ''
+                    ? Number(parseFloat(formulaire.tauxVente))
+                    : 0,
+            };
+            setListeTaux(prev => [...prev, nouveauTaux]);
+            toast.success("Taux ajouté avec succès !");
+
+        }
+
+        // Reset formulaire
+        setFormulaire({ deviseDepart: '', deviseArrivee: '', tauxActuel: '', tauxVente: '' });
+        setShowTauxVente(false);
+
+        // Scroll vers le formulaire
+        formRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
 
 
     const editTaux = (taux) => {
@@ -110,6 +118,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
             tauxActuel: taux.tauxActuel,
             tauxVente: taux.tauxVente,
         });
+         setShowTauxVente(true);
         setEditId(taux.id);
 
         // Scroll vers le formulaire pour édition
@@ -180,19 +189,38 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                             />
 
                         </div>
-                        <div className=''>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                4️⃣ Taux de Vente
-                            </label>
-                            <input
-                                type="number"
-                                step="0.0001"
-                                placeholder="Ex: 650.0000"
-                                value={formulaire.tauxVente}
-                                onChange={(e) => handleformChange('tauxVente', e.target.value)}
+                        <div>
 
-                                className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
-                            />
+                        </div>
+                        <div className=''>
+                            {!showTauxVente && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTauxVente(true)}
+                                    className=" text-blue-600 hover:underline"
+                                >
+                                    Ajouter un Taux de Vente
+                                </button>
+                            )}
+                            {showTauxVente && (
+                                <div className=''>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        4️⃣ Taux de Vente
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        step="0.0001"
+                                        placeholder="Ex: 650.0000"
+                                        value={formulaire.tauxVente }
+                                        onChange={(e) => handleformChange('tauxVente', e.target.value)}
+
+                                        className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                                    />
+                                    <p className='text-xs text-gray-500 mt-1'>Taux de vente est optionnel</p>
+                                </div>
+                            )}
+
 
                         </div>
 
@@ -223,7 +251,7 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                                 // Calculer le taux inverse pour le taux de vente
                                 const tauxVenteInverse = taux.tauxVente > 0
                                     ? Number((1 / taux.tauxVente).toFixed(6))
-                                    : "-"; 
+                                    : "-";
 
 
                                 return (
@@ -259,7 +287,9 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                                                         </div>
 
                                                         {/* Taux de vente */}
-                                                        <div>
+                                                        {taux.tauxVente > 0 && (
+
+                                                             <div>
                                                             <span className="text-sm font-medium text-gray-700">
                                                                 Taux Vente : <br />
                                                                 1 {taux.deviseDepart} =
@@ -271,10 +301,12 @@ function ChangeManager({ devises = [], listeTaux = [], setListeTaux, etape2 }) {
                                                             <span className="text-sm font-medium text-gray-700">
                                                                 1 {taux.deviseArrivee} =
                                                                 <span className="ml-1 font-bold text-red-700">
-                                                                  {tauxVenteInverse}{taux.deviseDepart}
+                                                                    {tauxVenteInverse} {taux.deviseDepart}
                                                                 </span>
                                                             </span>
                                                         </div>
+                                                        )}
+                                                       
                                                     </div>
                                                 </div>
                                             </div>
